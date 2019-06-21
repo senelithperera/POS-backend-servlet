@@ -2,6 +2,7 @@ package absd.servlet;
 
 import javax.annotation.Resource;
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.servlet.ServletException;
@@ -12,9 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 
 @WebServlet(urlPatterns = "/customers")
 public class CustomerServlet extends HttpServlet {
@@ -73,5 +72,48 @@ public class CustomerServlet extends HttpServlet {
             }
             out.close();
         }
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        System.out.println("get all method");
+
+        try (PrintWriter out = resp.getWriter()) {
+
+            resp.setContentType("application/json");
+
+            try {
+                Connection connections = ds.getConnection();
+
+                Statement stm = connections.createStatement();
+                ResultSet rst = stm.executeQuery("SELECT * FROM Customer");
+
+                JsonArrayBuilder customers = Json.createArrayBuilder();
+
+                while (rst.next()) {
+                    String id = rst.getString("id");
+                    String name = rst.getString("name");
+                    String address = rst.getString("address");
+                    String salary = rst.getString("salary");
+
+                    JsonObject customer = Json.createObjectBuilder()
+                            .add("id", id)
+                            .add("name", name)
+                            .add("address", address)
+                            .add("salary", salary)
+                            .build();
+                    customers.add(customer);
+                }
+
+                out.println(customers.build().toString());
+
+                connections.close();
+            } catch (Exception ex) {
+                resp.sendError(500, ex.getMessage());
+                ex.printStackTrace();
+            }
+
+        }
+
     }
 }
